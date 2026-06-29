@@ -11,8 +11,10 @@ import Button from '../components/ui/Button';
 import AvatarGroup from '../components/ui/AvatarGroup';
 import GroupCard from '../features/groups/components/GroupCard';
 import CTASection from '../components/layout/CTASection';
+import Spinner from '../components/ui/Spinner';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useAuth } from '../context/AuthContext';
+import { useGroups } from '../features/groups/hooks/useGroups';
 
 // ─── Scroll animation hook ────────────────────────────────────────────────────
 
@@ -73,60 +75,6 @@ const SOCIAL_PROOF_USERS = [
   { alt: 'Marcos S.', src: 'https://i.pravatar.cc/150?img=7' },
   { alt: 'Ana P.', src: 'https://i.pravatar.cc/150?img=9' },
 ];
-
-const FEATURED_GROUPS = [
-  {
-    id: 'demo-1',
-    title: 'Aceite de Oliva Extra Virgen',
-    description: 'Aceite de oliva extra virgen de primera presión en frío. Origen: Mendoza.',
-    imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&q=80',
-    category: 'alimentos',
-    unitPrice: 4800,
-    wholesalePrice: 3200,
-    discountPercentage: 33,
-    minimumUnits: 200,
-    committedUnits: 164,
-    activeMembers: 34,
-    status: 'open',
-    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    tags: ['aceite', 'oliva', 'mendoza'],
-    supplier: { name: 'Finca Dorada S.A.' },
-  },
-  {
-    id: 'demo-2',
-    title: 'Auriculares Inalámbricos Pro',
-    description: 'Auriculares TWS con cancelación de ruido activa.',
-    imageUrl: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&q=80',
-    category: 'tecnologia',
-    unitPrice: 35000,
-    wholesalePrice: 21000,
-    discountPercentage: 40,
-    minimumUnits: 50,
-    committedUnits: 42,
-    activeMembers: 12,
-    status: 'open',
-    expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    tags: ['tecnologia', 'audio'],
-    supplier: { name: 'ElectroTech Importaciones' },
-  },
-  {
-    id: 'demo-3',
-    title: 'Juego de Sábanas 400 Hilos',
-    description: 'Sábanas 100% algodón, calidad hotelera.',
-    imageUrl: 'https://images.unsplash.com/photo-1522771730841-5fa04c5bc497?auto=format&fit=crop&q=80',
-    category: 'hogar',
-    unitPrice: 45000,
-    wholesalePrice: 28000,
-    discountPercentage: 38,
-    minimumUnits: 100,
-    committedUnits: 30,
-    activeMembers: 8,
-    status: 'open',
-    expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-    tags: ['hogar', 'blanco'],
-    supplier: { name: 'Textil Premium S.A.' },
-  }
-] as any;
 
 // ─── Step card ────────────────────────────────────────────────────────────────
 
@@ -197,6 +145,10 @@ export default function HomePage() {
   usePageTitle('Comprá como los grandes');
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Grupos reales en formación: tomamos los abiertos y mostramos hasta 3.
+  const { groups, loading } = useGroups({ status: 'open' });
+  const featuredGroups = groups.slice(0, 3);
 
   useEffect(() => {
     if (user?.role === 'supplier') {
@@ -441,13 +393,19 @@ export default function HomePage() {
             </FadeIn>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURED_GROUPS.map((group: any, i: number) => (
-              <FadeIn key={group.id} delay={i * 100}>
-                <GroupCard group={group} />
-              </FadeIn>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredGroups.map((group, i) => (
+                <FadeIn key={group.id} delay={i * 100}>
+                  <GroupCard group={group} />
+                </FadeIn>
+              ))}
+            </div>
+          )}
 
           <FadeIn delay={300}>
             <div className="mt-10 text-center">
