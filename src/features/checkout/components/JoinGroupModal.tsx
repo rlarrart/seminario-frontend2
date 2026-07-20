@@ -1,7 +1,7 @@
 /**
  * Wizard de 3 pasos para unirse a un grupo de compra.
  * Paso 1: seleccionar cantidad y ver el total a pagar.
- * Paso 2: confirmar — llama a joinGroup() que crea la adhesión via API.
+ * Paso 2: confirmar compra — abre el modal de pago.
  * Paso 3: éxito — compra confirmada.
  */
 
@@ -13,6 +13,7 @@ import { formatCurrency } from '../../../utils/formatCurrency';
 import type { Group } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { joinGroup } from '../services';
+import PaymentModal from './PaymentModal';
 
 interface JoinGroupModalProps {
   isOpen: boolean;
@@ -29,8 +30,8 @@ export default function JoinGroupModal({ isOpen, onClose, group, existingQuantit
   const { user } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [quantity, setQuantity] = useState(1);
-  const [confirming, setConfirming] = useState(false);
-  const [confirmError, setConfirmError] = useState('');
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentCancelledMessage, setPaymentCancelledMessage] = useState('');
   // Snapshot of existingQuantity taken when the modal opens. State is not
   // overwritten by prop changes, so onSuccess→refetch can't flip isAdding
   // mid-session and show wrong "ya tenías X" counts on step 3.
@@ -50,23 +51,30 @@ export default function JoinGroupModal({ isOpen, onClose, group, existingQuantit
     setTimeout(() => {
       setStep(1);
       setQuantity(1);
-      setConfirmError('');
+      setPaymentCancelledMessage('');
+      setPaymentModalOpen(false);
       setFrozenExistingQty(existingQuantity ?? 0);
     }, 300);
   }
 
-  async function handleConfirm() {
+  function handleOpenPayment() {
+    setPaymentCancelledMessage('');
+    setPaymentModalOpen(true);
+  }
+
+  function handlePaymentCancel() {
+    setPaymentModalOpen(false);
+    setPaymentCancelledMessage('Ocurrió un error en el procesamiento del pago. Por favor, intentá nuevamente.');
+  }
+
+  function handlePaymentComplete() {
+    setPaymentModalOpen(false);
+  }
+
+  async function handlePayment() {
     if (!user) return;
-    setConfirming(true);
-    setConfirmError('');
-    try {
-      await joinGroup(group.id, quantity);
-      setStep(3);
-    } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : 'Ocurrió un error. Intentá de nuevo.');
-    } finally {
-      setConfirming(false);
-    }
+    await joinGroup(group.id, quantity);
+    setStep(3);
   }
 
   const titles: Record<Step, string> = {
@@ -136,6 +144,15 @@ export default function JoinGroupModal({ isOpen, onClose, group, existingQuantit
 
       {step === 2 && (
         <div className="flex flex-col gap-5">
+          {paymentCancelledMessage && (
+            <div className="flex items-center gap-2.5 text-sm text-status-cancelled font-body bg-status-cancelled/10 rounded-xl px-4 py-2.5">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="leading-snug">{paymentCancelledMessage}</p>
+            </div>
+          )}
+
           <div className="bg-surface rounded-xl p-4 flex flex-col gap-2 border border-ink-faint/30">
             <p className="font-display font-semibold text-ink text-sm mb-1">{group.title}</p>
             <SummaryRow label="Cantidad" value={`${quantity} unidades`} />
@@ -154,22 +171,15 @@ export default function JoinGroupModal({ isOpen, onClose, group, existingQuantit
             </p>
           </div>
 
-          {confirmError && (
-            <p className="text-sm text-status-cancelled font-body bg-status-cancelled/10 rounded-xl px-4 py-2.5">
-              {confirmError}
-            </p>
-          )}
-
           <div className="flex gap-3">
-            <Button variant="secondary" size="md" onClick={() => setStep(1)} disabled={confirming}>
+            <Button variant="secondary" size="md" onClick={() => setStep(1)} disabled={paymentModalOpen}>
               Volver
             </Button>
             <Button
               variant="primary"
               size="md"
               fullWidth
-              loading={confirming}
-              onClick={handleConfirm}
+              onClick={handleOpenPayment}
             >
               Confirmar y Pagar
             </Button>
@@ -217,6 +227,13 @@ export default function JoinGroupModal({ isOpen, onClose, group, existingQuantit
           </div>
         </div>
       )}
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        onCancel={handlePaymentCancel}
+        onPaymentComplete={handlePaymentComplete}
+        total={total}
+        onPay={handlePayment}
+      />
     </Modal>
   );
 }
