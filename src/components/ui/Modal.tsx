@@ -11,16 +11,27 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  zIndex?: number;
+  closeOnOverlay?: boolean;
 }
 
 const sizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
   sm: 'max-w-md',
   md: 'max-w-2xl',
   lg: 'max-w-4xl',
+  xl: 'max-w-5xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export default function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
+  zIndex = 50,
+  closeOnOverlay = true,
+}: ModalProps) {
   const titleId = useId();
 
   useEffect(() => {
@@ -29,7 +40,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
     document.body.style.overflow = 'hidden';
 
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && closeOnOverlay) onClose();
     };
     document.addEventListener('keydown', handleKey);
 
@@ -37,14 +48,15 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
       document.body.style.overflow = '';
       document.removeEventListener('keydown', handleKey);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, closeOnOverlay]);
 
   if (!isOpen) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex }}
+      onClick={closeOnOverlay ? onClose : undefined}
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" style={{ animation: 'fadeIn 150ms ease-out' }} />
