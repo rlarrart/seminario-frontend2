@@ -13,6 +13,10 @@ export interface Review {
     storeName?: string;
     avatarUrl?: string;
   };
+  opportunity?: {
+    id: string;
+    title: string;
+  };
 }
 
 export async function createReview(opportunityId: string, rating: number, comment?: string): Promise<Review> {

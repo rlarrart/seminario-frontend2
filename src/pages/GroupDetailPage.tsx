@@ -155,6 +155,26 @@ function AlreadyJoined({
   hasReviewed: boolean;
   onReviewClick: () => void;
 }) {
+  const isConfirmed = group.status === 'confirmed';
+  const isCancelled = group.status === 'cancelled';
+  
+  let boxTitle = 'Ya estás participando';
+  let messageText = 'Tu reserva está registrada. Cuando el grupo alcance el 100% de la meta o finalice el tiempo de convocatoria, se procesará el pedido.';
+  let borderClass = 'border-brand-teal/40 bg-brand-teal/5';
+  let textClass = 'text-brand-teal';
+  let iconColor = 'text-brand-teal';
+  
+  if (isConfirmed) {
+    boxTitle = '¡Compra Confirmada!';
+    messageText = '¡Tu participación está confirmada! Este grupo alcanzó el objetivo de compra. El proveedor coordinará el envío y la distribución colectiva.';
+  } else if (isCancelled) {
+    boxTitle = 'Compra Cancelada';
+    messageText = 'Este grupo de compra fue cancelado porque no se alcanzó el mínimo de unidades. Los fondos comprometidos han sido liberados.';
+    borderClass = 'border-status-cancelled/40 bg-status-cancelled/5';
+    textClass = 'text-status-cancelled';
+    iconColor = 'text-status-cancelled';
+  }
+
   const statusLabel =
     commitment.status === 'confirmed'
       ? 'Confirmado'
@@ -174,14 +194,17 @@ function AlreadyJoined({
   const canAddMore = group.status === 'open' && group.remainingUnits > 0;
 
   return (
-    <div className="rounded-2xl border-2 border-brand-teal/40 bg-brand-teal/5 p-5 flex flex-col gap-3">
+    <div className={`rounded-2xl border-2 ${borderClass} p-5 flex flex-col gap-3`}>
       <div className="flex items-center gap-2">
-        <svg className="w-5 h-5 text-brand-teal shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className={`w-5 h-5 ${iconColor} shrink-0`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span className="font-display font-bold text-sm text-brand-teal">Ya estás participando</span>
+        <span className={`font-display font-bold text-sm ${textClass}`}>{boxTitle}</span>
       </div>
-      <div className="flex flex-col gap-1.5">
+      <p className="font-body text-xs text-ink-muted leading-relaxed">
+        {messageText}
+      </p>
+      <div className="flex flex-col gap-1.5 border-t border-ink-faint/30 pt-3">
         <div className="flex justify-between text-sm font-body">
           <span className="text-ink-muted">Cantidad reservada</span>
           <span className="font-semibold text-ink">{commitment.quantity} u.</span>
@@ -191,7 +214,7 @@ function AlreadyJoined({
           <span className="font-semibold text-ink">{formatCurrency(commitment.totalAmount)}</span>
         </div>
         <div className="flex justify-between text-sm font-body items-center">
-          <span className="text-ink-muted">Estado</span>
+          <span className="text-ink-muted">Estado de tu reserva</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-display ${statusColor}`}>
             {statusLabel}
           </span>
@@ -217,7 +240,7 @@ function AlreadyJoined({
       )}
       <Link
         to="/mi-cuenta"
-        className="text-xs font-body font-medium text-brand-teal hover:underline text-center"
+        className={`text-xs font-body font-medium ${isCancelled ? 'text-status-cancelled' : 'text-brand-teal'} hover:underline text-center`}
       >
         Ver mis compras →
       </Link>
@@ -239,6 +262,11 @@ interface CTAProps {
 function CTADesktop({ group, commitment, onJoin, onOpenAuth, hasReviewed, onReviewClick }: CTAProps) {
   const { user, isAuthenticated } = useAuth();
   const isOpen = group.status === 'open';
+  const buttonText = group.status === 'confirmed'
+    ? 'Compra Confirmada (Cerrado)'
+    : group.status === 'cancelled'
+      ? 'Convocatoria Cancelada'
+      : 'Grupo cerrado';
 
   // Suppliers: informational notice, no purchase CTA
   if (user?.role === 'supplier') {
@@ -279,7 +307,7 @@ function CTADesktop({ group, commitment, onJoin, onOpenAuth, hasReviewed, onRevi
   // Buyer — join
   return (
     <Button variant="primary" size="lg" fullWidth disabled={!isOpen} onClick={onJoin}>
-      {isOpen ? 'Sumarme al grupo' : 'Grupo cerrado'}
+      {isOpen ? 'Sumarme al grupo' : buttonText}
     </Button>
   );
 }
@@ -292,7 +320,17 @@ function CTAMobile({ group, commitment, onJoin, onOpenAuth, hasReviewed, onRevie
   if (user?.role === 'supplier') return null;
 
   const handleClick = !isAuthenticated ? onOpenAuth : onJoin;
-  const label = !isAuthenticated ? 'Iniciar sesión' : isOpen ? 'Sumarme' : 'Cerrado';
+  const label = !isAuthenticated 
+    ? 'Iniciar sesión' 
+    : isOpen 
+      ? 'Sumarme' 
+      : group.status === 'confirmed'
+        ? 'Confirmado'
+        : group.status === 'cancelled'
+          ? 'Cancelado'
+          : 'Cerrado';
+
+  const isConfirmed = group.status === 'confirmed';
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-surface-card border-t border-ink-faint/30 px-4 py-3 shadow-lg">
@@ -303,7 +341,9 @@ function CTAMobile({ group, commitment, onJoin, onOpenAuth, hasReviewed, onRevie
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div className="min-w-0">
-              <p className="font-display font-bold text-sm text-brand-teal">Ya estás participando</p>
+              <p className="font-display font-bold text-sm text-brand-teal">
+                {isConfirmed ? '¡Compra Confirmada!' : 'Ya estás participando'}
+              </p>
               <p className="font-body text-xs text-ink-muted">{commitment.quantity} u. · {formatCurrency(commitment.totalAmount)}</p>
             </div>
           </div>
@@ -577,6 +617,30 @@ export default function GroupDetailPage() {
           <span>/</span>
           <span className="text-ink line-clamp-1 max-w-xs">{group.title}</span>
         </nav>
+
+        {/* Banners muy notorios de estado de la oportunidad cuando está cerrada */}
+        {group.status === 'confirmed' && (
+          <div className="bg-status-confirmed/10 border-2 border-status-confirmed/30 text-status-confirmed rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 shadow-sm mb-8">
+            <span className="text-2xl sm:text-3xl mt-0.5 shrink-0">🎉</span>
+            <div>
+              <h3 className="font-display font-extrabold text-base text-status-confirmed">¡Compra Mayorista Confirmada!</h3>
+              <p className="font-body text-sm text-status-confirmed/90 mt-1 leading-relaxed">
+                Este grupo completó con éxito la meta de unidades mínimas. La convocatoria ya está cerrada y el proveedor se encuentra procesando las entregas colectivas. No se aceptan más participantes ni reservas de unidades.
+              </p>
+            </div>
+          </div>
+        )}
+        {group.status === 'cancelled' && (
+          <div className="bg-status-cancelled/10 border-2 border-status-cancelled/30 text-status-cancelled rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 shadow-sm mb-8">
+            <span className="text-2xl sm:text-3xl mt-0.5 shrink-0">⚠️</span>
+            <div>
+              <h3 className="font-display font-extrabold text-base text-status-cancelled">Convocatoria Cancelada</h3>
+              <p className="font-body text-sm text-status-cancelled/90 mt-1 leading-relaxed">
+                Esta oportunidad expiró sin alcanzar el mínimo requerido de unidades, o fue cancelada por el proveedor. Los montos comprometidos por los participantes han sido liberados en su totalidad.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-10 items-start">
           {/* ── Left column ──────────────────────────────────────────────── */}
